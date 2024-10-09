@@ -5,8 +5,8 @@ import 'package:flutter_form_builder/flutter_form_builder.dart'; // Form builder
 import 'package:firebase_storage/firebase_storage.dart'; // Firebase Storage
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore for saving form data
 import 'package:image_picker/image_picker.dart'; // For picking images
-// For file paths
 import 'kuli_info_page.dart'; // Import Kuli Info Page
+//import 'traveler.dart'; // Traveler model
 
 class TravelerInfoPage extends StatefulWidget {
   const TravelerInfoPage({super.key});
@@ -19,7 +19,6 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
   final _formKey = GlobalKey<FormBuilderState>();
   Uint8List? _imageBytes; // To store picked image bytes
   File? _imageFile; // Store the picked image as a file
-  String? _uploadedImageUrl; // Store the uploaded image URL
   bool isLoading = false;
 
   /// Method to pick an image (either as bytes or file)
@@ -28,7 +27,7 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
-      // Depending on the use case, you can either store the image as a File or Uint8List bytes.
+      // Store the image as a File and Uint8List bytes.
       Uint8List imageBytes = await image.readAsBytes();
       File imageFile = File(image.path);
 
@@ -66,54 +65,63 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
       return null;
     }
   }
+Future<void> _saveDataToFirestore(Map<String, dynamic> formData, String? imageUrl) async {
+    try {
+      // Add traveler data to Firestore and get the document reference
+      DocumentReference travelerRef = await FirebaseFirestore.instance.collection('traveler').add({
+        'name': formData['name'],
+        'current_location': formData['current_location'],
+        'destination': formData['destination'],
+        'phone_number': formData['phone_number'],
+        'photo_url': imageUrl ?? '', // Save the image URL, if available
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
-  /// Method to save form data and image URL to Firestore
- Future<void> _saveDataToFirestore(Map<String, dynamic> formData, String? imageUrl) async {
-  try {
-    await FirebaseFirestore.instance.collection('traveler').add({
-      'name': formData['name'],
-      'current_location': formData['current_location'],
-      'destination': formData['destination'],
-      'phone_number': formData['phone_number'],
-      'photo_url': imageUrl ?? '', // Save the download URL
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Traveler data saved successfully')),
-    );
+      DocumentSnapshot travelerDoc = await travelerRef.get(); // Fetch the document snapshot
 
-    // Navigate to Kuli Info Page after successful form submission
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => KuliInfoPage(
-          travelerDestination: formData['destination'],
+    // Assign the travelerId from the DocumentSnapshot
+    String travelerId = travelerDoc.id; // Assign the document ID to travelerId
+
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Traveler data saved successfully')),
+      );
+
+      // After successful submission, navigate to the Kuli Info Page, passing travelerId and form data
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => KuliInfoPage(
+            travelerDestination: formData['destination'],
+            travelerData: formData,
+            travelerImageUrl: imageUrl,
+            travelerId: travelerId, // Pass the document ID (travelerId)
+          ),
         ),
-      ),
-    );
-  } catch (e) {
-    print("Error saving data to Firestore: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Failed to save data')),
-    );
+      );
+    } catch (e) {
+      print("Error saving data to Firestore: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save data')),
+      );
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.deepOrangeAccent[100],
-        title: const Text('Traveler Information',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 22,
-          color:Colors.white,
-        ),),
+        title: const Text(
+          'Traveler Information',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+            color: Colors.white,
+          ),
+        ),
         centerTitle: true,
         elevation: 10,
-
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -125,7 +133,7 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
               children: [
                 Image.asset(
                   'assets/logo.png',
-                  height:120,
+                  height: 120,
                 ),
                 FormBuilderTextField(
                   name: 'name',
@@ -142,8 +150,7 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Please enter your name' : null,
+                  validator: (value) => value == null || value.isEmpty ? 'Please enter your name' : null,
                 ),
                 const SizedBox(height: 20),
                 FormBuilderTextField(
@@ -222,12 +229,13 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
                       });
                       final formData = _formKey.currentState!.value; // Get form data
 
+                      String? uploadedImageUrl;
                       if (_imageBytes != null) {
                         // Upload image bytes
-                        _uploadedImageUrl = await _uploadImage(_imageBytes!);
+                        uploadedImageUrl = await _uploadImage(_imageBytes!);
                       }
 
-                      await _saveDataToFirestore(formData, _uploadedImageUrl);
+                      await _saveDataToFirestore(formData, uploadedImageUrl);
                       
                       setState(() {
                         isLoading = false;

@@ -2,16 +2,22 @@ import 'dart:io'; // For File class
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'kuli_details_page.dart';
+import 'traveler.dart';
 
 class KuliInfoPage extends StatefulWidget {
   final String travelerDestination; // Destination of the traveler
-   // Traveler's data
   final File? uploadedPhoto; // Optional uploaded photo
+  final String? travelerImageUrl;
+  final String? travelerId;
+  final Map<String, dynamic> travelerData;
 
   const KuliInfoPage({
     super.key,
     required this.travelerDestination,
     this.uploadedPhoto,
+    required this.travelerData,
+    this.travelerImageUrl,
+    this.travelerId,
   });
 
   @override
@@ -44,7 +50,11 @@ class _KuliInfoPageState extends State<KuliInfoPage> {
       // Filter Kuli profiles by travelerDestination
       for (var doc in snapshot.docs) {
         if (doc.data()['station'] == widget.travelerDestination) {
-          filteredProfiles.add(doc.data());
+          // Add the document data along with the document ID to the profiles list
+          filteredProfiles.add({
+            ...doc.data(),
+            'id': doc.id, // Add document ID to the profile map
+          });
         }
       }
 
@@ -88,6 +98,21 @@ class _KuliInfoPageState extends State<KuliInfoPage> {
                 backgroundColor: Colors.grey[200],
               ),
             ),
+            // Show Traveler ID
+            widget.travelerId != null
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'Traveler ID: ${widget.travelerId!}', // Display traveler ID
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepOrange,
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(), // Display nothing if travelerId is null
+            const SizedBox(height: 10),
             isLoading
                 ? const CircularProgressIndicator()
                 : Expanded(
@@ -106,8 +131,14 @@ class _KuliInfoPageState extends State<KuliInfoPage> {
                                 child: ListTile(
                                   contentPadding: const EdgeInsets.all(16.0),
                                   leading: CircleAvatar(
-                                    backgroundImage: NetworkImage(kuli['profileImage'] ?? ''),
+                                    backgroundImage: kuli['profileImage'] != null
+                                        ? NetworkImage(kuli['profileImage']) // Display the image from Firebase
+                                        : const AssetImage('assets/default_avatar.png')
+                                            as ImageProvider, // Fallback to default if no URL
                                     radius: 30,
+                                    onBackgroundImageError: (exception, stackTrace) {
+                                      print('Image load failed: $exception');
+                                    },
                                   ),
                                   title: Text(
                                     kuli['name'] ?? 'Unknown Kuli',
@@ -136,12 +167,15 @@ class _KuliInfoPageState extends State<KuliInfoPage> {
                                   ),
                                   trailing: ElevatedButton(
                                     onPressed: () {
+                                      // Navigate to the KuliDetailsPage and pass the selected Kuli profile along with the ID
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) => KuliDetailsPage(
-                                            kuli: kuli, // Pass the selected Kuli data
-                                             // Pass the traveler data
+                                            kuli: kuli, // Pass the selected Kuli data (including 'id')
+                                            travelerData: widget.travelerData, // Pass the traveler data
+                                            travelerImageUrl: widget.travelerImageUrl, // Pass the traveler image URL
+                                            travelerId: widget.travelerId, // Pass traveler ID
                                           ),
                                         ),
                                       );

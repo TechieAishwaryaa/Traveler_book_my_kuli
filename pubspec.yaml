@@ -31,7 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   image_picker: ^1.1.2
-  file_picker: ^8.1.2
+  file_picker: ^8.1.2  # Adjusted to the latest compatible version
   image_picker_web: ^4.0.0
   form_builder_image_picker: ^4.1.0
   permission_handler: ^11.3.1
@@ -41,7 +41,11 @@ dependencies:
   path_provider: ^2.1.4
   firebase_storage: ^12.3.2
   firebase_auth: ^5.3.1
-  http: ^1.2.2
+  firebase_messaging: ^15.1.3
+  http: ^1.2.2  # If newer versions are resolvable, adjust here
+  firebase_phone_auth_handler: ^1.1.0
+  shared_preferences: ^2.3.2
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

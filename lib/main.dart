@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'traveler_info_page.dart'; // Import the Traveler Info page
 import 'package:firebase_core/firebase_core.dart'; // Import Firebase core
+//import 'firebase_service.dart'; 
 
 const firebaseConfig = {
   "apiKey": "AIzaSyAABLBBksiKmh72rBTBEzL0Qh1_RD3NUD8",
@@ -25,6 +26,7 @@ void main() async {
       measurementId: firebaseConfig["measurementId"]!,
     ),
   ); // Ensure Firebase is initialized
+  //await FirebaseService.setupFCM();
   runApp(const MyApp());
 }
 
